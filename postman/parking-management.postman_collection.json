@@ -1,0 +1,665 @@
+{
+  "info": {
+    "name": "Parking Management — MVP",
+    "description": "Colección de regresión para los 4 endpoints del MVP.\n\nRequisitos:\n1. `docker compose up -d`\n2. `psql -f db/schema.sql` y `psql -f db/seed.sql`\n3. `npm run start:dev`\n\nCorre la colección completa con el Runner: está ordenada para que las dependencias se cumplan (crear sesión antes de consultarla, consultarla antes de cerrarla).\n\nEl seed debe estar intacto al empezar. Para volver al estado inicial:\n`docker exec -i parkingdb psql -U postgres -d ParkingDB < db/seed.sql`\n\nDos peticiones fallan hasta que `calculateAmount()` esté implementada; están marcadas con ⚠ en el nombre.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    },
+    {
+      "key": "ticketCode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "plate",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Lots",
+      "item": [
+        {
+          "name": "GET /lots — lista completa",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const lots = pm.response.json();",
+                  "pm.test('devuelve los 3 lots del seed', () => pm.expect(lots).to.have.lengthOf(3));",
+                  "pm.test('Poniente viene marcado como inactivo', () => {",
+                  "  const poniente = lots.find(l => l.name === 'Edificio Poniente');",
+                  "  pm.expect(poniente.isActive).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lots",
+              "host": ["{{baseUrl}}"],
+              "path": ["lots"]
+            }
+          }
+        },
+        {
+          "name": "GET /lots/1/availability — criterio de aceptación",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('capacity 9', () => pm.expect(body.capacity).to.eql(9));",
+                  "pm.test('occupied 2', () => pm.expect(body.occupied).to.eql(2));",
+                  "pm.test('available 7', () => pm.expect(body.available).to.eql(7));",
+                  "pm.test('los conteos son numeros, no strings', () => {",
+                  "  pm.expect(body.capacity).to.be.a('number');",
+                  "  pm.expect(body.occupied).to.be.a('number');",
+                  "});",
+                  "pm.test('no expone el id del lot', () => pm.expect(body).to.not.have.property('id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lots/1/availability",
+              "host": ["{{baseUrl}}"],
+              "path": ["lots", "1", "availability"]
+            }
+          }
+        },
+        {
+          "name": "GET /lots/2/availability — Sur",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('capacity 7, occupied 3', () => {",
+                  "  pm.expect(body.capacity).to.eql(7);",
+                  "  pm.expect(body.occupied).to.eql(3);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lots/2/availability",
+              "host": ["{{baseUrl}}"],
+              "path": ["lots", "2", "availability"]
+            }
+          }
+        },
+        {
+          "name": "GET /lots/3/availability — lot inactivo → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 aunque el lot exista, por estar inactivo', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lots/3/availability",
+              "host": ["{{baseUrl}}"],
+              "path": ["lots", "3", "availability"]
+            }
+          }
+        },
+        {
+          "name": "GET /lots/999/availability — inexistente → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404', () => pm.response.to.have.status(404));",
+                  "pm.test('no devuelve ceros disfrazados de 200', () => pm.expect(pm.response.json()).to.not.have.property('capacity'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lots/999/availability",
+              "host": ["{{baseUrl}}"],
+              "path": ["lots", "999", "availability"]
+            }
+          }
+        },
+        {
+          "name": "GET /lots/abc/availability — id no numérico → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 por ParseIntPipe', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lots/abc/availability",
+              "host": ["{{baseUrl}}"],
+              "path": ["lots", "abc", "availability"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sessions — alta",
+      "item": [
+        {
+          "name": "POST /sessions — alta con placa sucia",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Placa aleatoria para que la coleccion sea re-ejecutable.",
+                  "// Se manda sucia a proposito: minusculas, guion y espacio.",
+                  "const n = Math.floor(1000 + Math.random() * 9000);",
+                  "pm.collectionVariables.set('plate', `tst-${n} 00`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('devuelve ticketCode con formato T-AAAA-NNNN', () => {",
+                  "  pm.expect(body.ticketCode).to.match(/^T-\\d{4}-\\d{4}$/);",
+                  "});",
+                  "pm.test('devuelve lotName, no lotId', () => {",
+                  "  pm.expect(body.lotName).to.eql('Edificio Norte');",
+                  "  pm.expect(body).to.not.have.property('id');",
+                  "});",
+                  "pm.test('entryTime es una fecha valida', () => {",
+                  "  pm.expect(new Date(body.entryTime).toString()).to.not.eql('Invalid Date');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('ticketCode', body.ticketCode);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lotId\": 1,\n  \"plate\": \"{{plate}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions"]
+            }
+          }
+        },
+        {
+          "name": "POST /sessions — vehículo ya dentro → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 traducido del 23505 de Postgres', () => pm.response.to.have.status(409));",
+                  "pm.test('el mensaje identifica la placa', () => {",
+                  "  pm.expect(pm.response.json().message).to.include('VKR8321');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lotId\": 1,\n  \"plate\": \"vkr-8321\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions"]
+            }
+          }
+        },
+        {
+          "name": "POST /sessions — lot inactivo → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lotId\": 3,\n  \"plate\": \"NEW1234\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions"]
+            }
+          }
+        },
+        {
+          "name": "POST /sessions — placa vacía → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lotId\": 1,\n  \"plate\": \"\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions"]
+            }
+          }
+        },
+        {
+          "name": "POST /sessions — placa con símbolos → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "pm.test('la arroba no sobrevive a la normalizacion', () => {",
+                  "  const msg = JSON.stringify(pm.response.json().message);",
+                  "  pm.expect(msg).to.include('letters and digits');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lotId\": 1,\n  \"plate\": \"AB@#$1\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions"]
+            }
+          }
+        },
+        {
+          "name": "POST /sessions — placa muy larga → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lotId\": 1,\n  \"plate\": \"ABCDEFGHIJKLMNOPQRS\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions"]
+            }
+          }
+        },
+        {
+          "name": "POST /sessions — campo de más → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 por forbidNonWhitelisted', () => pm.response.to.have.status(400));",
+                  "pm.test('nombra el campo sobrante', () => {",
+                  "  pm.expect(JSON.stringify(pm.response.json().message)).to.include('color');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lotId\": 1,\n  \"plate\": \"ZZZ1111\",\n  \"color\": \"rojo\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sessions — consulta y salida",
+      "item": [
+        {
+          "name": "⚠ GET /sessions/{{ticketCode}} — requiere calculateAmount()",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 500) {",
+                  "  pm.test('PENDIENTE: calculateAmount() sin implementar', () => {",
+                  "    pm.expect.fail('500 — implementa src/common/calculate-amount.ts');",
+                  "  });",
+                  "} else {",
+                  "  pm.test('200', () => pm.response.to.have.status(200));",
+                  "  const body = pm.response.json();",
+                  "  pm.test('la placa vuelve normalizada', () => {",
+                  "    pm.expect(body.plate).to.match(/^[A-Z0-9]+$/);",
+                  "  });",
+                  "  pm.test('status es active', () => pm.expect(body.status).to.eql('active'));",
+                  "  pm.test('amountDue es numero', () => pm.expect(body.amountDue).to.be.a('number'));",
+                  "  pm.test('minutesElapsed es numero', () => pm.expect(body.minutesElapsed).to.be.a('number'));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/{{ticketCode}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions", "{{ticketCode}}"]
+            }
+          }
+        },
+        {
+          "name": "GET /sessions/T-2026-9999 — inexistente → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/T-2026-9999",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions", "T-2026-9999"]
+            }
+          }
+        },
+        {
+          "name": "POST /sessions/T-2026-0002/exit — salida desde 'paid'",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200, no 201: no crea un recurso', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('queda closed', () => pm.expect(body.status).to.eql('closed'));",
+                  "pm.test('no se cobra: ya habia pagado', () => pm.expect(body.amountCharged).to.eql(0));",
+                  "pm.test('previouslyPaid distingue esto de la tolerancia', () => {",
+                  "  pm.expect(body.previouslyPaid).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/T-2026-0002/exit",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions", "T-2026-0002", "exit"]
+            }
+          }
+        },
+        {
+          "name": "GET /lots/1/availability — la salida liberó un cajón",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('occupied bajo a 2: salio T-2026-0002, entro la sesion nueva', () => {",
+                  "  pm.expect(body.occupied).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lots/1/availability",
+              "host": ["{{baseUrl}}"],
+              "path": ["lots", "1", "availability"]
+            }
+          }
+        },
+        {
+          "name": "POST /sessions/T-2026-0002/exit — repetida → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409: ya estaba cerrada', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/T-2026-0002/exit",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions", "T-2026-0002", "exit"]
+            }
+          }
+        },
+        {
+          "name": "POST /sessions/T-2026-0003/exit — sesión cerrada → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/T-2026-0003/exit",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions", "T-2026-0003", "exit"]
+            }
+          }
+        },
+        {
+          "name": "POST /sessions/T-2026-9999/exit — inexistente → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/T-2026-9999/exit",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions", "T-2026-9999", "exit"]
+            }
+          }
+        },
+        {
+          "name": "⚠ POST /sessions/{{ticketCode}}/exit — requiere calculateAmount()",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 500) {",
+                  "  pm.test('PENDIENTE: calculateAmount() sin implementar', () => {",
+                  "    pm.expect.fail('500 — implementa src/common/calculate-amount.ts');",
+                  "  });",
+                  "} else {",
+                  "  pm.test('200', () => pm.response.to.have.status(200));",
+                  "  const body = pm.response.json();",
+                  "  pm.test('queda closed', () => pm.expect(body.status).to.eql('closed'));",
+                  "  pm.test('no habia pagado antes', () => pm.expect(body.previouslyPaid).to.eql(false));",
+                  "  pm.test('amountCharged es numero', () => pm.expect(body.amountCharged).to.be.a('number'));",
+                  "  pm.test('exitTime no es anterior a entryTime', () => {",
+                  "    pm.expect(new Date(body.exitTime) >= new Date(body.entryTime)).to.be.true;",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/{{ticketCode}}/exit",
+              "host": ["{{baseUrl}}"],
+              "path": ["sessions", "{{ticketCode}}", "exit"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
