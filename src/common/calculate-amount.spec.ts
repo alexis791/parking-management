@@ -9,7 +9,7 @@ describe('calculateAmount', () => {
     graceMinutes: 15,
   };
 
-  it('does not charge into the grace minutes', () => {
+  it('does not charge within the grace period', () => {
     const minutes = 10;
 
     //Act
@@ -19,7 +19,7 @@ describe('calculateAmount', () => {
     expect(amount).toBe(0);
   });
 
-  it('does not charge on the limit grace minutes', () => {
+  it('does not charge at the exact grace limit', () => {
     const minutes = 15;
 
     const amount = calculateAmount(minutes, rate);
@@ -27,7 +27,7 @@ describe('calculateAmount', () => {
     expect(amount).toBe(0);
   });
 
-  it('does charge on grace time exceed', () => {
+  it('charges once the grace period is exceeded', () => {
     const minutes = 16;
 
     const amount = calculateAmount(minutes, rate);
@@ -35,7 +35,7 @@ describe('calculateAmount', () => {
     expect(amount).toBe(25);
   });
 
-  it('charges 1 hour for 60 minutes ', () => {
+  it('charges 1 hour for exactly 60 minutes (y sin el espacio final)', () => {
     const minutes = 60;
 
     const amount = calculateAmount(minutes, rate);
@@ -67,30 +67,26 @@ describe('calculateAmount', () => {
     expect(amount).toBe(360);
   });
 
-  it('Charges with out dailyMax limit', () => {
-    const rate: AmountRate = {
-      pricePerHour: 25,
-      minCharge: 25,
+  it('does not cap the amount when dailyMax is null', () => {
+    const rateWithoutCap: AmountRate = {
+      ...rate,
       dailyMax: null,
-      graceMinutes: 15,
     };
     const minutes = 1800; // 30 hours
 
-    const amount = calculateAmount(minutes, rate);
+    const amount = calculateAmount(minutes, rateWithoutCap);
 
     expect(amount).toBe(750);
   });
 
-  it('Rounded Cents', () => {
-    const rate: AmountRate = {
+  it('rounds the amount to 2 decimals', () => {
+    const rateWithFractionHour: AmountRate = {
+      ...rate,
       pricePerHour: 25.1,
-      minCharge: 25,
-      dailyMax: null,
-      graceMinutes: 15,
     };
-    const minutes = 150; // 30 hours
+    const minutes = 150; // 2.5 hours
 
-    const amount = calculateAmount(minutes, rate);
+    const amount = calculateAmount(minutes, rateWithFractionHour);
 
     expect(amount).toBe(75.3);
   });
