@@ -90,4 +90,13 @@ describe('calculateAmount', () => {
 
     expect(amount).toBe(75.3);
   });
+
+  it('charges the minimum when it exceeds the hourly amount', () => {
+    const rateWithHighMin = { ...rate, pricePerHour: 10, minCharge: 30 };
+    const minutes = 20;
+
+    const amount = calculateAmount(minutes, rateWithHighMin);
+
+    expect(amount).toBe(30);
+  });
 });
