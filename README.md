@@ -12,6 +12,7 @@ lo que `db/schema.sql` define.
 
 ```bash
 npm install
+cp .env.template .env #Change the values
 docker compose up -d
 
 docker exec -i parkingdb psql -U postgres -d ParkingDB < db/schema.sql
@@ -35,14 +36,14 @@ docker exec -i parkingdb psql -U postgres -d ParkingDB < db/seed.sql
 
 ## Endpoints
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| `GET` | `/api/lots` | Lista los estacionamientos |
-| `GET` | `/api/lots/:id/availability` | Capacidad, ocupación y disponibles |
-| `GET` | `/api/sessions` | Lista sesiones. Filtros: `status`, `lotId` |
-| `GET` | `/api/sessions/:ticketCode` | Consulta un ticket con el monto a pagar |
-| `POST` | `/api/sessions` | Registra una entrada |
-| `POST` | `/api/sessions/:ticketCode/exit` | Registra la salida |
+| Método | Ruta                             | Qué hace                                   |
+| ------ | -------------------------------- | ------------------------------------------ |
+| `GET`  | `/api/lots`                      | Lista los estacionamientos                 |
+| `GET`  | `/api/lots/:id/availability`     | Capacidad, ocupación y disponibles         |
+| `GET`  | `/api/sessions`                  | Lista sesiones. Filtros: `status`, `lotId` |
+| `GET`  | `/api/sessions/:ticketCode`      | Consulta un ticket con el monto a pagar    |
+| `POST` | `/api/sessions`                  | Registra una entrada                       |
+| `POST` | `/api/sessions/:ticketCode/exit` | Registra la salida                         |
 
 ### POST /api/sessions
 
@@ -61,10 +62,17 @@ validarse. `abc-1234` se guarda como `ABC1234`.
 ### GET /api/sessions/:ticketCode
 
 ```jsonc
-{ "ticketCode": "T-2026-0001", "plate": "VKR8321",
-  "lotName": "Edificio Norte", "status": "active",
-  "entryTime": "...", "exitTime": null,
-  "minutesElapsed": 120, "hoursCharged": 2, "amountDue": 50 }
+{
+  "ticketCode": "T-2026-0001",
+  "plate": "VKR8321",
+  "lotName": "Edificio Norte",
+  "status": "active",
+  "entryTime": "...",
+  "exitTime": null,
+  "minutesElapsed": 120,
+  "hoursCharged": 2,
+  "amountDue": 50
+}
 ```
 
 En una sesión cerrada el reloj se detiene en `exitTime`.
@@ -77,14 +85,14 @@ Sin body. Devuelve `amountCharged` y `previouslyPaid`.
 
 ## Errores
 
-| Escenario | Código |
-|---|---|
-| Segunda entrada con placa que ya está dentro | `409` |
-| `ticketCode` inexistente | `404` |
-| Salir de una sesión ya cerrada | `409` |
-| `lotId` inexistente o inactivo | `404` |
-| Placa vacía, muy larga o con símbolos | `400` |
-| Campo de más en el body | `400` |
+| Escenario                                    | Código |
+| -------------------------------------------- | ------ |
+| Segunda entrada con placa que ya está dentro | `409`  |
+| `ticketCode` inexistente                     | `404`  |
+| Salir de una sesión ya cerrada               | `409`  |
+| `lotId` inexistente o inactivo               | `404`  |
+| Placa vacía, muy larga o con símbolos        | `400`  |
+| Campo de más en el body                      | `400`  |
 
 Ninguno sale como `500`.
 
@@ -178,14 +186,14 @@ de datos.
 
 Con la tarifa de Norte (25/h, mínimo 25, tope 180, gracia 15):
 
-| minutos | monto | qué prueba |
-|---|---|---|
-| 10 | 0.00 | tolerancia |
-| 16 | 25.00 | mínimo |
-| 60 | 25.00 | frontera exacta |
-| 61 | 50.00 | techo de fracción |
-| 600 | 180.00 | tope diario |
-| 1800 | 360.00 | dos días de tope |
+| minutos | monto  | qué prueba        |
+| ------- | ------ | ----------------- |
+| 10      | 0.00   | tolerancia        |
+| 16      | 25.00  | mínimo            |
+| 60      | 25.00  | frontera exacta   |
+| 61      | 50.00  | techo de fracción |
+| 600     | 180.00 | tope diario       |
+| 1800    | 360.00 | dos días de tope  |
 
 ---
 
@@ -209,14 +217,14 @@ Asume el seed intacto y está ordenada para el Runner.
   si el service olvida filtrar por `valid_to IS NULL`
 - 9 sesiones cubriendo los tres estados
 
-| ticket | lot | placa | estado |
-|---|---|---|---|
-| `T-2026-0001` | Norte | VKR8321 | `active` |
-| `T-2026-0002` | Norte | XPL4409 | `paid` |
-| `T-2026-0003` | Norte | TDN1157 | `closed` |
-| `T-2026-0005` | Sur | QBF7741 | `active` |
-| `T-2026-0006` | Sur | HJK2298 | `active` (10 min, dentro de la gracia) |
-| `T-2026-0007` | Sur | ZNC5514 | `paid` |
+| ticket        | lot   | placa   | estado                                 |
+| ------------- | ----- | ------- | -------------------------------------- |
+| `T-2026-0001` | Norte | VKR8321 | `active`                               |
+| `T-2026-0002` | Norte | XPL4409 | `paid`                                 |
+| `T-2026-0003` | Norte | TDN1157 | `closed`                               |
+| `T-2026-0005` | Sur   | QBF7741 | `active`                               |
+| `T-2026-0006` | Sur   | HJK2298 | `active` (10 min, dentro de la gracia) |
+| `T-2026-0007` | Sur   | ZNC5514 | `paid`                                 |
 
 ---
 
